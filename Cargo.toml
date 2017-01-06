@@ -1,0 +1,8 @@
+[package]
+name = "penandink"
+version = "0.1.0"
+authors = ["Tobias Frilling <tobias@frilling-online.de>"]
+
+[dependencies]
+csv = "0.15.0"
+rand = "0.3.14"
