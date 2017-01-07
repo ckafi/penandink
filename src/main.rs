@@ -23,13 +23,10 @@ fn main() {
 	let records_pens = read(&filename_pens);
 	let records_inks = read(&filename_inks);
 
-    let mut select_pen:Option<&Record>;
-    let mut select_ink:Option<&Record>;
+    let mut select_pen = weighted_random_selection(&records_pens);
+    let mut select_ink = weighted_random_selection(&records_inks);
 
     loop {
-        select_pen = weighted_random_selection(&records_pens);
-        select_ink = weighted_random_selection(&records_inks);
-
         println!("Stift: {}",select_pen.unwrap().name);
         println!("Tinte: {}",select_ink.unwrap().name);
 
@@ -40,7 +37,10 @@ fn main() {
                    .expect("Failed to read line");
         match answer.trim() {
             "y" => break,
-            _   => continue,
+            "p" => select_pen = weighted_random_selection(&records_pens),
+            "i" => select_ink = weighted_random_selection(&records_inks),
+            _   => {select_pen = weighted_random_selection(&records_pens);
+                    select_ink = weighted_random_selection(&records_inks);},
         }
     }
 
