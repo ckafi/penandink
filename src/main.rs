@@ -1,7 +1,7 @@
 extern crate csv;
 extern crate rand;
 
-use std::env;
+use std::path::Path;
 use std::io;
 use std::io::Write;
 use rand::Rng;
@@ -15,9 +15,7 @@ struct Record {
 
 
 fn main() {
-	let dirname = env::home_dir()
-				   .unwrap()
-				   .join("archive/penandink");
+	let dirname = Path::new("./");
 
     let filename_pens = dirname.join("pens.csv");
     let filename_inks = dirname.join("inks.csv");
@@ -83,7 +81,7 @@ fn weighted_random_selection(records:&Vec<Record>) -> Option<&Record> {
 }
 
 
-fn read(filename:&std::path::PathBuf) -> Vec<Record> {
+fn read(filename:&std::path::Path) -> Vec<Record> {
     let mut rdr = match csv::Reader::from_file(filename) {
         Ok(w) => w.has_headers(false),
         Err(_) => panic!("Panic at the reader"),
@@ -98,7 +96,7 @@ fn read(filename:&std::path::PathBuf) -> Vec<Record> {
 }
 
 
-fn write(records:Vec<Record>,filename:&std::path::PathBuf) {
+fn write(records:Vec<Record>,filename:&std::path::Path) {
     let mut wtr = match csv::Writer::from_file(filename) {
         Ok(w) => w,
         Err(_) => panic!("Panic at the writer"),
