@@ -72,9 +72,10 @@ fn factor() -> f64 {
 fn weighted_random_selection(records:&Vec<Record>) -> Option<&Record> {
 	let sum = records.iter()
                      .fold(0.0, |acc, x| acc + x.p);
-    let mut randnum = rand::thread_rng().gen_range(0, sum.floor() as i64) as f64;
+    // the sub is just to make sure the rndnum is lower than sum
+    let mut randnum = rand::thread_rng().gen_range(0.0, sum - 0.000001);
 	for record in records.iter() {
-        if randnum <= record.p {return Some(record);}
+        if randnum < record.p {return Some(record);}
         else {randnum -= record.p;}
 	}
     None
@@ -103,7 +104,6 @@ fn write(records:Vec<Record>,filename:&std::path::Path) {
     };
     for record in records.into_iter() {
 		let record:(String,f64) = (record.name, record.p);
-        println!("{:?}",record);
         let result = wtr.encode(record);
         assert!(result.is_ok());
     }
