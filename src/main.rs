@@ -15,13 +15,13 @@ struct Record {
 
 
 fn main() {
-	let dirname = Path::new("./");
+    let dirname = Path::new("./");
 
     let filename_pens = dirname.join("pens.csv");
     let filename_inks = dirname.join("inks.csv");
 
-	let records_pens = read(&filename_pens);
-	let records_inks = read(&filename_inks);
+    let records_pens = read(&filename_pens);
+    let records_inks = read(&filename_inks);
 
     let mut select_pen = weighted_random_selection(&records_pens);
     let mut select_ink = weighted_random_selection(&records_inks);
@@ -70,14 +70,14 @@ fn factor() -> f64 {
 
 
 fn weighted_random_selection(records:&Vec<Record>) -> Option<&Record> {
-	let sum = records.iter()
+    let sum = records.iter()
                      .fold(0.0, |acc, x| acc + x.p);
     // the sub is just to make sure the rndnum is lower than sum
     let mut randnum = rand::thread_rng().gen_range(0.0, sum - 0.000001);
-	for record in records.iter() {
+    for record in records.iter() {
         if randnum < record.p {return Some(record);}
         else {randnum -= record.p;}
-	}
+    }
     None
 }
 
@@ -88,12 +88,12 @@ fn read(filename:&std::path::Path) -> Vec<Record> {
         Err(_) => panic!("Panic at the reader"),
     };
     let mut r: Vec<Record> = vec![];
-	for row in rdr.decode() {
-		let row = row.unwrap();
+    for row in rdr.decode() {
+        let row = row.unwrap();
         let (n, p): (String, f64) = row;
-		r.push(Record {name: n, p: p});
+        r.push(Record {name: n, p: p});
     }
-	r
+    r
 }
 
 
@@ -103,7 +103,7 @@ fn write(records:Vec<Record>,filename:&std::path::Path) {
         Err(_) => panic!("Panic at the writer"),
     };
     for record in records.into_iter() {
-		let record:(String,f64) = (record.name, record.p);
+        let record:(String,f64) = (record.name, record.p);
         let result = wtr.encode(record);
         assert!(result.is_ok());
     }
