@@ -10,7 +10,7 @@ const DOUBLE_BY: f64 = 10.0;
 
 struct Record {
     name: String,
-    p:    f64,
+    p: f64,
 }
 
 
@@ -27,39 +27,51 @@ fn main() {
     let mut select_ink = weighted_random_selection(&records_inks);
 
     loop {
-        println!("Stift: {}",select_pen.unwrap().name);
-        println!("Tinte: {}",select_ink.unwrap().name);
+        println!("Stift: {}", select_pen.unwrap().name);
+        println!("Tinte: {}", select_ink.unwrap().name);
 
         print!("Zufrieden? ");
         io::stdout().flush();
         let mut answer = String::new();
-        io::stdin().read_line(&mut answer)
-                   .expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read line");
         match answer.trim() {
             "y" => break,
             "p" => select_pen = weighted_random_selection(&records_pens),
             "i" => select_ink = weighted_random_selection(&records_inks),
-            _   => {select_pen = weighted_random_selection(&records_pens);
-                    select_ink = weighted_random_selection(&records_inks);},
+            _ => {
+                select_pen = weighted_random_selection(&records_pens);
+                select_ink = weighted_random_selection(&records_inks);
+            }
         }
     }
 
-    let records_pens = update_records(&records_pens,&select_pen);
-    let records_inks = update_records(&records_inks,&select_ink);
+    let records_pens = update_records(&records_pens, &select_pen);
+    let records_inks = update_records(&records_inks, &select_ink);
 
-    write(records_pens,&filename_pens);
-    write(records_inks,&filename_inks);
+    write(records_pens, &filename_pens);
+    write(records_inks, &filename_inks);
 }
 
 
-fn update_records(records:&Vec<Record>,selection:&Option<&Record>) -> Vec<Record> {
-    let records = records
-                  .iter()
-                  .map(|x| Record {p: x.p*factor(), name: x.name.clone()})
-                  .map(|x| if x.name == selection.unwrap().name {
-                               Record {p:1.0,name:x.name.clone()}
-                           } else {x})
-                  .collect();
+fn update_records(records: &Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
+    let records = records.iter()
+        .map(|x| {
+            Record {
+                p: x.p * factor(),
+                name: x.name.clone(),
+            }
+        })
+        .map(|x| if x.name == selection.unwrap().name {
+            Record {
+                p: 1.0,
+                name: x.name.clone(),
+            }
+        } else {
+            x
+        })
+        .collect();
     records
 }
 
@@ -69,20 +81,23 @@ fn factor() -> f64 {
 }
 
 
-fn weighted_random_selection(records:&Vec<Record>) -> Option<&Record> {
+fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     let sum = records.iter()
-                     .fold(0.0, |acc, x| acc + x.p);
+        .fold(0.0, |acc, x| acc + x.p);
     // the sub is just to make sure the rndnum is lower than sum
     let mut randnum = rand::thread_rng().gen_range(0.0, sum - 0.000001);
     for record in records.iter() {
-        if randnum < record.p {return Some(record);}
-        else {randnum -= record.p;}
+        if randnum < record.p {
+            return Some(record);
+        } else {
+            randnum -= record.p;
+        }
     }
     None
 }
 
 
-fn read(filename:&std::path::Path) -> Vec<Record> {
+fn read(filename: &std::path::Path) -> Vec<Record> {
     let mut rdr = match csv::Reader::from_file(filename) {
         Ok(w) => w.has_headers(false),
         Err(_) => panic!("Panic at the reader"),
@@ -91,19 +106,19 @@ fn read(filename:&std::path::Path) -> Vec<Record> {
     for row in rdr.decode() {
         let row = row.unwrap();
         let (n, p): (String, f64) = row;
-        r.push(Record {name: n, p: p});
+        r.push(Record { name: n, p: p });
     }
     r
 }
 
 
-fn write(records:Vec<Record>,filename:&std::path::Path) {
+fn write(records: Vec<Record>, filename: &std::path::Path) {
     let mut wtr = match csv::Writer::from_file(filename) {
         Ok(w) => w,
         Err(_) => panic!("Panic at the writer"),
     };
     for record in records.into_iter() {
-        let record:(String,f64) = (record.name, record.p);
+        let record: (String, f64) = (record.name, record.p);
         let result = wtr.encode(record);
         assert!(result.is_ok());
     }
