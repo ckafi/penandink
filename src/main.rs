@@ -33,9 +33,9 @@ fn main() {
         print!("Zufrieden? ");
         io::stdout().flush();
         let mut answer = String::new();
-        io::stdin()
-            .read_line(&mut answer)
-            .expect("Failed to read line");
+        io::stdin().read_line(&mut answer).expect(
+            "Failed to read line",
+        );
         match answer.trim() {
             "y" => break,
             "p" => select_pen = weighted_random_selection(&records_pens),
@@ -56,7 +56,8 @@ fn main() {
 
 
 fn update_records(records: &Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
-    let records = records.iter()
+    let records = records
+        .iter()
         .map(|x| {
             Record {
                 p: x.p * factor(),
@@ -82,8 +83,7 @@ fn factor() -> f64 {
 
 
 fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
-    let sum = records.iter()
-        .fold(0.0, |acc, x| acc + x.p);
+    let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
     // the sub is just to make sure the rndnum is lower than sum
     let mut randnum = rand::thread_rng().gen_range(0.0, sum - 0.000001);
     for record in records.iter() {
