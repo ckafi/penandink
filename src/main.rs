@@ -1,13 +1,13 @@
-extern crate csv;
-extern crate rand;
-
 use std::path::Path;
 use std::io;
 use std::io::Write;
+
 use rand::Rng;
+use serde::{Serialize, Deserialize};
 
 const DOUBLE_BY: f64 = 10.0;
 
+#[derive(Serialize, Deserialize, Debug)]
 struct Record {
     name: String,
     p: f64,
@@ -31,7 +31,7 @@ fn main() {
         println!("Tinte: {}", select_ink.unwrap().name);
 
         print!("Zufrieden? ");
-        io::stdout().flush();
+        io::stdout().flush().unwrap();
         let mut answer = String::new();
         io::stdin().read_line(&mut answer).expect(
             "Failed to read line",
@@ -85,9 +85,9 @@ fn factor() -> f64 {
 fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
     // the sub is just to make sure the rndnum is lower than sum
-    let mut randnum = rand::thread_rng().gen_range(0.0, sum - 0.000001);
+    let mut randnum = rand::thread_rng().gen_range(0.0, sum);
     for record in records.iter() {
-        if randnum < record.p {
+        if randnum <= record.p {
             return Some(record);
         } else {
             randnum -= record.p;
@@ -98,28 +98,20 @@ fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
 
 
 fn read(filename: &std::path::Path) -> Vec<Record> {
-    let mut rdr = match csv::Reader::from_file(filename) {
-        Ok(w) => w.has_headers(false),
-        Err(_) => panic!("Panic at the reader"),
-    };
+    let mut rdr = csv::Reader::from_path(filename).unwrap();
     let mut r: Vec<Record> = vec![];
-    for row in rdr.decode() {
-        let row = row.unwrap();
-        let (n, p): (String, f64) = row;
-        r.push(Record { name: n, p: p });
+    for row in rdr.deserialize() {
+        let record: Record = row.expect("csv record");
+        r.push(record);
     }
     r
 }
 
 
 fn write(records: Vec<Record>, filename: &std::path::Path) {
-    let mut wtr = match csv::Writer::from_file(filename) {
-        Ok(w) => w,
-        Err(_) => panic!("Panic at the writer"),
-    };
+    let mut wtr = csv::Writer::from_path(filename).unwrap();
     for record in records.into_iter() {
-        let record: (String, f64) = (record.name, record.p);
-        let result = wtr.encode(record);
+        let result = wtr.serialize(record);
         assert!(result.is_ok());
     }
 }
