@@ -1,9 +1,9 @@
-use std::path::Path;
 use std::io;
 use std::io::Write;
+use std::path::Path;
 
 use rand::Rng;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 // exponential growth, doubles every DOUBLE_BY steps
 const DOUBLE_BY: f64 = 10.0;
@@ -11,13 +11,11 @@ fn factor() -> f64 {
     ((2.0_f64).ln() / DOUBLE_BY).exp()
 }
 
-
 #[derive(Serialize, Deserialize, Debug)]
 struct Record {
     name: String,
     p: f64,
 }
-
 
 fn main() {
     let dirname = Path::new("./");
@@ -38,7 +36,9 @@ fn main() {
 
         io::stdout().flush().unwrap();
         let mut answer = String::new();
-        io::stdin().read_line(&mut answer).expect("Failed to read line");
+        io::stdin()
+            .read_line(&mut answer)
+            .expect("Failed to read line");
         match answer.trim() {
             "y" => break,
             "p" => select_pen = weighted_random_selection(&records_pens),
@@ -57,18 +57,20 @@ fn main() {
     write(records_inks, &filename_inks);
 }
 
-
 fn update_records(records: &Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
     let records = records
         .iter()
         .map(|x| Record {
-            p: if x.name == selection.unwrap().name { 1.0 }
-               else { x.p * factor() },
+            p: if x.name == selection.unwrap().name {
+                1.0
+            } else {
+                x.p * factor()
+            },
             name: x.name.clone(),
-        }).collect();
+        })
+        .collect();
     records
 }
-
 
 fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
@@ -83,7 +85,6 @@ fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     None
 }
 
-
 fn read(filename: &std::path::Path) -> Vec<Record> {
     let mut rdr = csv::Reader::from_path(filename).unwrap();
     let mut r: Vec<Record> = vec![];
@@ -93,7 +94,6 @@ fn read(filename: &std::path::Path) -> Vec<Record> {
     }
     r
 }
-
 
 fn write(records: Vec<Record>, filename: &std::path::Path) {
     let mut wtr = csv::Writer::from_path(filename).unwrap();
