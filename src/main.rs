@@ -5,7 +5,12 @@ use std::io::Write;
 use rand::Rng;
 use serde::{Serialize, Deserialize};
 
+// exponential growth, doubles every DOUBLE_BY steps
 const DOUBLE_BY: f64 = 10.0;
+fn factor() -> f64 {
+    ((2.0_f64).ln() / DOUBLE_BY).exp()
+}
+
 
 #[derive(Serialize, Deserialize, Debug)]
 struct Record {
@@ -29,13 +34,11 @@ fn main() {
     loop {
         println!("Stift: {}", select_pen.unwrap().name);
         println!("Tinte: {}", select_ink.unwrap().name);
-
         print!("Zufrieden? ");
+
         io::stdout().flush().unwrap();
         let mut answer = String::new();
-        io::stdin().read_line(&mut answer).expect(
-            "Failed to read line",
-        );
+        io::stdin().read_line(&mut answer).expect("Failed to read line");
         match answer.trim() {
             "y" => break,
             "p" => select_pen = weighted_random_selection(&records_pens),
@@ -58,33 +61,17 @@ fn main() {
 fn update_records(records: &Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
     let records = records
         .iter()
-        .map(|x| {
-            Record {
-                p: x.p * factor(),
-                name: x.name.clone(),
-            }
-        })
-        .map(|x| if x.name == selection.unwrap().name {
-            Record {
-                p: 1.0,
-                name: x.name.clone(),
-            }
-        } else {
-            x
-        })
-        .collect();
+        .map(|x| Record {
+            p: if x.name == selection.unwrap().name { 1.0 }
+               else { x.p * factor() },
+            name: x.name.clone(),
+        }).collect();
     records
-}
-
-
-fn factor() -> f64 {
-    ((2.0_f64).ln() / DOUBLE_BY).exp()
 }
 
 
 fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
-    // the sub is just to make sure the rndnum is lower than sum
     let mut randnum = rand::thread_rng().gen_range(0.0, sum);
     for record in records.iter() {
         if randnum <= record.p {
