@@ -99,7 +99,7 @@ fn read(filename: &std::path::Path) -> Vec<Record> {
     let mut rdr = csv::Reader::from_path(filename).unwrap();
     let mut r: Vec<Record> = vec![];
     for row in rdr.deserialize() {
-        let record: Record = row.expect("csv record");
+        let record: Record = row.expect(&format!("Read error ({})", filename.display()));
         r.push(record);
     }
     r
