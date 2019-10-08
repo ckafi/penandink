@@ -11,7 +11,7 @@ fn factor() -> f64 {
     ((2.0_f64).ln() / DOUBLE_BY).exp()
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 struct Record {
     name: String,
     p: f64,
@@ -23,18 +23,16 @@ fn main() {
     let filename_pens = dirname.join("pens.csv");
     let filename_inks = dirname.join("inks.csv");
 
-    let records_pens = read(&filename_pens);
-    let records_inks = read(&filename_inks);
+    let mut records_pens = read(&filename_pens);
+    let mut records_inks = read(&filename_inks);
 
-    let mut selected_pen: Option<&Record> = None;
-    let mut selected_ink: Option<&Record> = None;
+    let mut selected_pen: Option<&str> = None;
+    let mut selected_ink: Option<&str> = None;
 
     loop {
-        println!("Pen: {}", selected_pen.map_or("None", |r| &r.name));
-        println!("Ink: {}", selected_ink.map_or("None", |r| &r.name));
-        println!(
-            "(p)en, (i)nk, (mp) manual pen selection, (mi) manual ink selection, (s)ave, (A)bort"
-        );
+        println!("Pen: {}", selected_pen.unwrap_or("None"));
+        println!("Ink: {}", selected_ink.unwrap_or("None"));
+        println!("(p)en, (i)nk, (mp) search pen, (mi) search ink, (s)ave, (A)bort");
         print!("=> ");
         io::stdout().flush().unwrap();
         let mut answer = String::new();
@@ -56,19 +54,22 @@ fn main() {
         println!();
     }
 
-    let records_pens = update_records(records_pens.to_vec(), selected_pen);
-    let records_inks = update_records(records_inks.to_vec(), selected_ink);
+    let selected_pen = selected_pen.map(String::from);
+    let selected_ink = selected_ink.map(String::from);
 
-    write(records_pens, &filename_pens);
-    write(records_inks, &filename_inks);
+    update_records(&mut records_pens, &selected_pen);
+    update_records(&mut records_inks, &selected_ink);
+
+    write(&records_pens, &filename_pens);
+    write(&records_inks, &filename_inks);
 }
 
-fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
+fn weighted_random_selection(records: &[Record]) -> Option<&str> {
     let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
     let mut randnum = rand::thread_rng().gen_range(0.0, sum);
     for record in records.iter() {
         if randnum <= record.p {
-            return Some(record);
+            return Some(&record.name);
         } else {
             randnum -= record.p;
         }
@@ -76,7 +77,7 @@ fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
     None
 }
 
-fn manual_selection(records: &Vec<Record>) -> Option<&Record> {
+fn manual_selection(records: &[Record]) -> Option<&str> {
     print!("Search string: ");
     io::stdout().flush().unwrap();
     let mut answer = String::new();
@@ -109,27 +110,24 @@ fn manual_selection(records: &Vec<Record>) -> Option<&Record> {
         .read_line(&mut answer)
         .expect("Failed to read line");
     match answer.trim().parse::<usize>().ok() {
-        Some(v) => records.get(v - 1).and_then(|(record, _)| Some(*record)),
-        None => None,
+        Some(v) => records
+            .get(v - 1)
+            .and_then(|(record, _)| Some(&record.name[..])),
+        None => {
+            println!("None selected");
+            None
+        }
     }
 }
 
-fn update_records(records: Vec<Record>, selection: Option<&Record>) -> Vec<Record> {
-    match selection {
-        None => records,
-        Some(selection) => {
-            let records = records
-                .iter()
-                .map(|x| Record {
-                    p: if x.name == selection.name {
-                        1.0
-                    } else {
-                        x.p * factor()
-                    },
-                    name: x.name.clone(),
-                })
-                .collect();
-            records
+fn update_records(records: &mut [Record], selection: &Option<String>) {
+    if selection.is_some() {
+        for record in records.iter_mut() {
+            if record.name == *selection.as_ref().unwrap() {
+                record.p = 1.0
+            } else {
+                record.p *= factor()
+            }
         }
     }
 }
@@ -148,7 +146,7 @@ fn read(filename: &std::path::Path) -> Vec<Record> {
     result
 }
 
-fn write(records: Vec<Record>, filename: &std::path::Path) {
+fn write(records: &[Record], filename: &std::path::Path) {
     let file = File::create(filename).unwrap();
     let mut file_writer = io::BufWriter::new(file);
     for record in records {
