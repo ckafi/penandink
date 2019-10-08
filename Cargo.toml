@@ -5,7 +5,5 @@ authors = ["Tobias Frilling <tobias@frilling-online.de>"]
 edition = "2018"
 
 [dependencies]
-csv = "*"
 rand = "*"
-serde = { version = "*", features = ["derive"] }
 fuzzy-matcher = "*"

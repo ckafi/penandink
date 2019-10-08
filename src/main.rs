@@ -1,10 +1,9 @@
-use std::io;
-use std::io::Write;
+use std::fs::File;
+use std::io::{self, BufRead, Write};
 use std::path::Path;
 
 use fuzzy_matcher::skim::fuzzy_match;
 use rand::Rng;
-use serde::{Deserialize, Serialize};
 
 // exponential growth, doubles every DOUBLE_BY steps
 const DOUBLE_BY: f64 = 10.0;
@@ -12,7 +11,7 @@ fn factor() -> f64 {
     ((2.0_f64).ln() / DOUBLE_BY).exp()
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 struct Record {
     name: String,
     p: f64,
@@ -57,8 +56,8 @@ fn main() {
         println!();
     }
 
-    let records_pens = update_records(records_pens.to_vec(), &selected_pen);
-    let records_inks = update_records(records_inks.to_vec(), &selected_ink);
+    let records_pens = update_records(records_pens.to_vec(), selected_pen);
+    let records_inks = update_records(records_inks.to_vec(), selected_ink);
 
     write(records_pens, &filename_pens);
     write(records_inks, &filename_inks);
@@ -115,7 +114,7 @@ fn manual_selection(records: &Vec<Record>) -> Option<&Record> {
     }
 }
 
-fn update_records(records: Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
+fn update_records(records: Vec<Record>, selection: Option<&Record>) -> Vec<Record> {
     match selection {
         None => records,
         Some(selection) => {
@@ -136,19 +135,25 @@ fn update_records(records: Vec<Record>, selection: &Option<&Record>) -> Vec<Reco
 }
 
 fn read(filename: &std::path::Path) -> Vec<Record> {
-    let mut rdr = csv::Reader::from_path(filename).unwrap();
-    let mut r: Vec<Record> = vec![];
-    for row in rdr.deserialize() {
-        let record: Record = row.expect(&format!("Read error ({})", filename.display()));
-        r.push(record);
+    let mut result: Vec<Record> = vec![];
+    let file = File::open(filename).unwrap();
+    let file_reader = io::BufReader::new(file);
+    for line in file_reader.lines().map(|l| l.unwrap()) {
+        let fields: Vec<&str> = line.trim().split(",").collect();
+        result.push(Record {
+            name: String::from(fields[0]),
+            p: fields[1].parse::<f64>().unwrap(),
+        });
     }
-    r
+    result
 }
 
 fn write(records: Vec<Record>, filename: &std::path::Path) {
-    let mut wtr = csv::Writer::from_path(filename).unwrap();
-    for record in records.into_iter() {
-        let result = wtr.serialize(record);
-        assert!(result.is_ok());
+    let file = File::create(filename).unwrap();
+    let mut file_writer = io::BufWriter::new(file);
+    for record in records {
+        let r = write!(file_writer, "{},{}\n", record.name, record.p);
+        r.expect(&format!("Can't write {:?}", record));
     }
+    file_writer.flush().unwrap();
 }
