@@ -11,7 +11,7 @@ fn factor() -> f64 {
     ((2.0_f64).ln() / DOUBLE_BY).exp()
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 struct Record {
     name: String,
     p: f64,
@@ -26,50 +26,60 @@ fn main() {
     let records_pens = read(&filename_pens);
     let records_inks = read(&filename_inks);
 
-    let mut select_pen = weighted_random_selection(&records_pens);
-    let mut select_ink = weighted_random_selection(&records_inks);
+    let mut selected_pen: Option<&Record> = None;
+    let mut selected_ink: Option<&Record> = None;
 
     loop {
-        println!("Stift: {}", select_pen.unwrap().name);
-        println!("Tinte: {}", select_ink.unwrap().name);
-        print!("Zufrieden? ");
-
+        println!("Pen: {}", selected_pen.map_or("None", |r| &r.name));
+        println!("Ink: {}", selected_ink.map_or("None", |r| &r.name));
+        println!("(p)en, (i)nk, (s)ave, (A)bort");
         io::stdout().flush().unwrap();
         let mut answer = String::new();
         io::stdin()
             .read_line(&mut answer)
             .expect("Failed to read line");
         match answer.trim() {
-            "y" => break,
-            "p" => select_pen = weighted_random_selection(&records_pens),
-            "i" => select_ink = weighted_random_selection(&records_inks),
+            "p" => {
+                selected_pen = weighted_random_selection(&records_pens);
+            }
+            "i" => {
+                selected_ink = weighted_random_selection(&records_inks);
+            }
+            "s" => break,
             _ => {
-                select_pen = weighted_random_selection(&records_pens);
-                select_ink = weighted_random_selection(&records_inks);
+                selected_pen = None;
+                selected_ink = None;
+                break;
             }
         }
+        println!("");
     }
 
-    let records_pens = update_records(&records_pens, &select_pen);
-    let records_inks = update_records(&records_inks, &select_ink);
+    let records_pens = update_records(records_pens.to_vec(), &selected_pen);
+    let records_inks = update_records(records_inks.to_vec(), &selected_ink);
 
     write(records_pens, &filename_pens);
     write(records_inks, &filename_inks);
 }
 
-fn update_records(records: &Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
-    let records = records
-        .iter()
-        .map(|x| Record {
-            p: if x.name == selection.unwrap().name {
-                1.0
-            } else {
-                x.p * factor()
-            },
-            name: x.name.clone(),
-        })
-        .collect();
-    records
+fn update_records(records: Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
+    match selection {
+        None => records,
+        Some(selection) => {
+            let records = records
+                .iter()
+                .map(|x| Record {
+                    p: if x.name == selection.name {
+                        1.0
+                    } else {
+                        x.p * factor()
+                    },
+                    name: x.name.clone(),
+                })
+                .collect();
+            records
+        }
+    }
 }
 
 fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
