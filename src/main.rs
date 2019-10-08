@@ -2,6 +2,7 @@ use std::io;
 use std::io::Write;
 use std::path::Path;
 
+use fuzzy_matcher::skim::fuzzy_match;
 use rand::Rng;
 use serde::{Deserialize, Serialize};
 
@@ -32,19 +33,20 @@ fn main() {
     loop {
         println!("Pen: {}", selected_pen.map_or("None", |r| &r.name));
         println!("Ink: {}", selected_ink.map_or("None", |r| &r.name));
-        println!("(p)en, (i)nk, (s)ave, (A)bort");
+        println!(
+            "(p)en, (i)nk, (mp) manual pen selection, (mi) manual ink selection, (s)ave, (A)bort"
+        );
+        print!("=> ");
         io::stdout().flush().unwrap();
         let mut answer = String::new();
         io::stdin()
             .read_line(&mut answer)
             .expect("Failed to read line");
         match answer.trim() {
-            "p" => {
-                selected_pen = weighted_random_selection(&records_pens);
-            }
-            "i" => {
-                selected_ink = weighted_random_selection(&records_inks);
-            }
+            "p" => selected_pen = weighted_random_selection(&records_pens),
+            "i" => selected_ink = weighted_random_selection(&records_inks),
+            "mp" => selected_pen = manual_selection(&records_pens),
+            "mi" => selected_ink = manual_selection(&records_inks),
             "s" => break,
             _ => {
                 selected_pen = None;
@@ -52,7 +54,7 @@ fn main() {
                 break;
             }
         }
-        println!("");
+        println!();
     }
 
     let records_pens = update_records(records_pens.to_vec(), &selected_pen);
@@ -60,6 +62,57 @@ fn main() {
 
     write(records_pens, &filename_pens);
     write(records_inks, &filename_inks);
+}
+
+fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
+    let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
+    let mut randnum = rand::thread_rng().gen_range(0.0, sum);
+    for record in records.iter() {
+        if randnum <= record.p {
+            return Some(record);
+        } else {
+            randnum -= record.p;
+        }
+    }
+    None
+}
+
+fn manual_selection(records: &Vec<Record>) -> Option<&Record> {
+    print!("Search string: ");
+    io::stdout().flush().unwrap();
+    let mut answer = String::new();
+    io::stdin()
+        .read_line(&mut answer)
+        .expect("Failed to read line");
+
+    let mut records: Vec<(&Record, i64)> = records
+        .iter()
+        .filter_map(|record| {
+            fuzzy_match(&record.name, &answer.trim()).and_then(|score| Some((record, score)))
+        })
+        .collect();
+    if records.is_empty() {
+        println!("No results");
+        return None;
+    }
+    records.sort_by_key(|(_, score)| *score);
+    records.reverse();
+    let mut index = 1;
+    for (r, _) in records.iter() {
+        println!("({}) {}", index, r.name);
+        index += 1;
+    }
+
+    print!("Selection: ");
+    io::stdout().flush().unwrap();
+    answer = String::new();
+    io::stdin()
+        .read_line(&mut answer)
+        .expect("Failed to read line");
+    match answer.trim().parse::<usize>().ok() {
+        Some(v) => records.get(v - 1).and_then(|(record, _)| Some(*record)),
+        None => None,
+    }
 }
 
 fn update_records(records: Vec<Record>, selection: &Option<&Record>) -> Vec<Record> {
@@ -80,19 +133,6 @@ fn update_records(records: Vec<Record>, selection: &Option<&Record>) -> Vec<Reco
             records
         }
     }
-}
-
-fn weighted_random_selection(records: &Vec<Record>) -> Option<&Record> {
-    let sum = records.iter().fold(0.0, |acc, x| acc + x.p);
-    let mut randnum = rand::thread_rng().gen_range(0.0, sum);
-    for record in records.iter() {
-        if randnum <= record.p {
-            return Some(record);
-        } else {
-            randnum -= record.p;
-        }
-    }
-    None
 }
 
 fn read(filename: &std::path::Path) -> Vec<Record> {
