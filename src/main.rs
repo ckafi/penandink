@@ -1,7 +1,8 @@
-use std::fs::File;
+use std::fs::{File, OpenOptions};
 use std::io::{self, BufRead, Write};
 use std::path::Path;
 
+use chrono::{Local, Date};
 use fuzzy_matcher::skim::fuzzy_match;
 use rand::Rng;
 
@@ -54,14 +55,19 @@ fn main() {
         println!();
     }
 
-    let selected_pen = selected_pen.map(String::from);
-    let selected_ink = selected_ink.map(String::from);
+    if selected_pen.is_some() {
+        let selected_pen = selected_pen.unwrap().to_owned();
+        update_records(&mut records_pens, &selected_pen);
+        write(&records_pens, &filename_pens);
+        log(&selected_pen);
+    }
 
-    update_records(&mut records_pens, &selected_pen);
-    update_records(&mut records_inks, &selected_ink);
-
-    write(&records_pens, &filename_pens);
-    write(&records_inks, &filename_inks);
+    if selected_ink.is_some() {
+        let selected_ink = selected_ink.unwrap().to_owned();
+        update_records(&mut records_inks, &selected_ink);
+        write(&records_inks, &filename_inks);
+        log(&selected_ink);
+    }
 }
 
 fn weighted_random_selection(records: &[Record]) -> Option<&str> {
@@ -120,14 +126,12 @@ fn manual_selection(records: &[Record]) -> Option<&str> {
     }
 }
 
-fn update_records(records: &mut [Record], selection: &Option<String>) {
-    if selection.is_some() {
-        for record in records.iter_mut() {
-            if record.name == *selection.as_ref().unwrap() {
-                record.p = 1.0
-            } else {
-                record.p *= factor()
-            }
+fn update_records(records: &mut [Record], selection: &String) {
+    for record in records.iter_mut() {
+        if record.name == *selection {
+            record.p = 1.0
+        } else {
+            record.p *= factor()
         }
     }
 }
@@ -150,8 +154,20 @@ fn write(records: &[Record], filename: &std::path::Path) {
     let file = File::create(filename).unwrap();
     let mut file_writer = io::BufWriter::new(file);
     for record in records {
-        let r = write!(file_writer, "{},{}\n", record.name, record.p);
+        let r = writeln!(file_writer, "{},{}", record.name, record.p);
         r.expect(&format!("Can't write {:?}", record));
     }
     file_writer.flush().unwrap();
+}
+
+fn log(selection: &String) {
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .append(true)
+        .open("log")
+        .unwrap();
+    let today:Date<Local> = Local::today();
+    writeln!(file, "{}: {}", today.format("%F"), *selection).unwrap();
+    file.flush().unwrap();
 }
